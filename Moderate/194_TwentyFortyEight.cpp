@@ -4,12 +4,61 @@
 #include <string.h>
 #include <vector>
 using namespace std;
+class Tile;
 
-void ShiftVector(uint16_t (&Grid)[11][11], int8_t UpDown, int8_t RightLeft, int8_t Size, bool Equals);
+void ShiftVector(Tile (&Grid)[11][11], int8_t UpDown, int8_t RightLeft, int8_t Size);
+
+class Tile
+{
+public:
+    Tile() 
+    {
+        Value = 0;
+        ActionPreformed = false;
+    };
+    
+    ~Tile()
+    {
+        
+    };
+    
+    void Set(uint16_t inValue)
+    {
+        Value = inValue;
+        ActionPreformed = false;
+    }
+    
+    bool Combine(Tile & OtherTile)
+    {
+        bool ReturnValue = false;
+        if (OtherTile.Value == 0 && Value != 0)
+        {
+            OtherTile.Value = Value;
+            OtherTile.ActionPreformed = ActionPreformed;
+            Value = 0;
+            ActionPreformed = false;
+            ReturnValue = true;
+        }
+        else if (OtherTile.Value == Value && !ActionPreformed && !OtherTile.ActionPreformed && Value != 0)
+        {
+           OtherTile.Value = OtherTile.Value * 2;
+           OtherTile.ActionPreformed = true;
+           Value = 0;
+           ActionPreformed = false;
+           ReturnValue = true;
+        }
+        return ReturnValue;
+    }
+    uint16_t Value;
+    bool ActionPreformed;
+    
+};
+
+
 int main(int argc, char *argv[]) {
     ifstream stream(argv[1]);
     string line;
-	uint16_t Grid[11][11];
+	Tile Grid[11][11];
     while (getline(stream, line)) {
         size_t pos = line.find(";");
         string sDirection = line.substr(0, pos);
@@ -32,38 +81,30 @@ int main(int argc, char *argv[]) {
 		        string sElement = line.substr(0, pos);
 		        uint16_t Element = atoi(sElement.c_str());
 				line = line.substr(pos + 1);
-				Grid[Index][InnerIndex] = Element;
+				Grid[Index][InnerIndex].Set(Element);
 			}
 			pos = line.find("|");
 	        string sElement = line.substr(0, pos);
 	        uint16_t Element = atoi(sElement.c_str());
 			line = line.substr(pos + 1);
-			Grid[Index][Size - 1] = Element;
+			Grid[Index][Size - 1].Set(Element);
 		}
 		
 		if (sDirection.c_str()[0] == 'U')
 		{
-			ShiftVector(Grid, -1, 0, Size, false);
-			ShiftVector(Grid, -1, 0, Size, true);
-			ShiftVector(Grid, -1, 0, Size, false);
+			ShiftVector(Grid, -1, 0, Size);
 		}
 		else if (sDirection.c_str()[0] == 'D')
 		{
-			ShiftVector(Grid, 1, 0, Size, false);
-			ShiftVector(Grid, 1, 0, Size, true);
-			ShiftVector(Grid, 1, 0, Size, false);
+			ShiftVector(Grid, 1, 0, Size);
 		}
 		else if (sDirection.c_str()[0] == 'R')
 		{
-			ShiftVector(Grid, 0, 1, Size, false);
-			ShiftVector(Grid, 0, 1, Size, true);
-			ShiftVector(Grid, 0, 1, Size, false);
+			ShiftVector(Grid, 0, 1, Size);
 		}
 		else if (sDirection.c_str()[0] == 'L')
 		{
-			ShiftVector(Grid, 0, -1, Size, false);
-			ShiftVector(Grid, 0, -1, Size, true);
-			ShiftVector(Grid, 0, -1, Size, false);
+			ShiftVector(Grid, 0, -1, Size);
 		}
 		else
 		{
@@ -76,7 +117,7 @@ int main(int argc, char *argv[]) {
 			{
 				if (InnerIndex != 0)
 					printf(" ");
-				printf("%d", (Grid[Index])[InnerIndex]);
+				printf("%d", (Grid[Index])[InnerIndex].Value);
 			}
 			if(Index < Size - 1)
 				printf("|");
@@ -84,10 +125,10 @@ int main(int argc, char *argv[]) {
 		printf("\n");
     }
     return 0;
-}
+};
 
 
-void ShiftVector(uint16_t (&Grid)[11][11], int8_t UpDown, int8_t RightLeft, int8_t Size, bool Equals)
+void ShiftVector(Tile (&Grid)[11][11], int8_t UpDown, int8_t RightLeft, int8_t Size)
 {
 	for (int8_t UDIndex = 0; UDIndex < Size; UDIndex++)
 	{
@@ -98,19 +139,10 @@ void ShiftVector(uint16_t (&Grid)[11][11], int8_t UpDown, int8_t RightLeft, int8
 				((UDIndex + UpDown) >= 0) && 
 				((UDIndex + UpDown) < Size))
 			{
-				
-				if((Grid[UDIndex + UpDown])[RLIndex + RightLeft] == 0 && (Grid[UDIndex])[RLIndex] != 0)
-				{
-					(Grid[UDIndex + UpDown])[RLIndex + RightLeft] = (Grid[UDIndex])[RLIndex];
-					(Grid[UDIndex])[RLIndex] = 0;
-					ShiftVector(Grid, UpDown, RightLeft, Size, false);
-				}
-				else if (Equals && (Grid[UDIndex])[RLIndex] == (Grid[UDIndex + UpDown])[RLIndex + RightLeft] && (Grid[UDIndex])[RLIndex] != 0)
-				{
-					(Grid[UDIndex + UpDown])[RLIndex + RightLeft] = (Grid[UDIndex + UpDown])[RLIndex + RightLeft] * 2;
-					(Grid[UDIndex])[RLIndex] = 0;
-					ShiftVector(Grid, UpDown, RightLeft, Size, false);
-				}
+			    if(Grid[UDIndex][RLIndex].Combine(Grid[UDIndex + UpDown][RLIndex + RightLeft]))
+			    {
+			        ShiftVector(Grid, UpDown, RightLeft, Size);
+			    }
 			}
 			
 		}
